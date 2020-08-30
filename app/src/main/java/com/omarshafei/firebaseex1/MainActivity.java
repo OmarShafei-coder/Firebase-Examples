@@ -58,8 +58,14 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 if (documentSnapshot.exists()) {
-                    String title = documentSnapshot.getString(TITLE_KEY);
-                    String description = documentSnapshot.getString(DESCRIPTION_KEY);
+                    Note note = documentSnapshot.toObject(Note.class);
+                    String title = "No title";
+                    String description = "No description";
+                    if (note != null) {
+                        title = note.getTitle();
+                        description = note.getDescription();
+                    }
+
                     textViewData.setText("Title: " + title + "\n" + "Description: " + description);
                 }
             }
@@ -70,9 +76,7 @@ public class MainActivity extends AppCompatActivity {
         String title = titleEditText.getText().toString();
         String description = descriptionEditText.getText().toString();
 
-        Map<String, Object> note = new HashMap<>();
-        note.put(TITLE_KEY, title);
-        note.put(DESCRIPTION_KEY, description);
+        Note note = new Note(title, description);
 
         noteRef.set(note).addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
@@ -94,9 +98,19 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSuccess(DocumentSnapshot documentSnapshot) {
                 if(documentSnapshot.exists()){
+                    //that's why we declared an empty constructor
+                    Note note = documentSnapshot.toObject(Note.class);
+
+                    String title = "No title";
+                    String description = "No description";
+
                     Toast.makeText(MainActivity.this, "Note Loaded", Toast.LENGTH_SHORT).show();
-                    String title = documentSnapshot.getString(TITLE_KEY);
-                    String description = documentSnapshot.getString(DESCRIPTION_KEY);
+
+                    if(note != null) {
+                        title = note.getTitle();
+                        description = note.getDescription();
+                    }
+
                     textViewData.setText("Title: "+ title + "\n" + "Description: "+ description);
                 }else{
                     Toast.makeText(MainActivity.this, "Document does not exist", Toast.LENGTH_SHORT).show();
