@@ -1,6 +1,7 @@
 package com.omarshafei.firebaseex1;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
@@ -15,11 +16,14 @@ import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,14 +31,11 @@ import java.util.Map;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
-    private static final String TITLE_KEY = "title";
-    private static final String DESCRIPTION_KEY = "description";
     private EditText titleEditText;
     private EditText descriptionEditText;
     private TextView textViewData;
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
-    private DocumentReference noteRef = db.document("Notebook/My First Note");
-
+    private CollectionReference noteRef = db.collection("Notebook");
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -49,78 +50,48 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         //In onEvent method we can get real time updates as soon as something changes in our document
-        noteRef.addSnapshotListener(this, new EventListener<DocumentSnapshot>() {
+        noteRef.addSnapshotListener(new EventListener<QuerySnapshot>() {
             @Override
-            public void onEvent(DocumentSnapshot documentSnapshot, FirebaseFirestoreException e) {
-                if (e != null) {
-                    Toast.makeText(MainActivity.this, "Error while loading!", Toast.LENGTH_SHORT).show();
-                    Log.d(TAG, e.toString());
+            public void onEvent(@Nullable QuerySnapshot querySnapshot, @Nullable FirebaseFirestoreException error) {
+                if(error != null){
                     return;
                 }
-                if (documentSnapshot.exists()) {
-                    Note note = documentSnapshot.toObject(Note.class);
-                    String title = "No title";
-                    String description = "No description";
-                    if (note != null) {
-                        title = note.getTitle();
-                        description = note.getDescription();
-                    }
 
-                    textViewData.setText("Title: " + title + "\n" + "Description: " + description);
+                if (querySnapshot != null) {
+                    for(QueryDocumentSnapshot queryDocumentSnapshot: querySnapshot) {
+                        Note note = queryDocumentSnapshot.toObject(Note.class);
+
+                        String title = note.getTitle();
+                        String description = note.getDescription();
+                        String data = "Title: "+ title + "\n"+ "Description: "+ description + "\n\n";
+                        textViewData.setText(data);
+                    }
                 }
             }
         });
     }
 
-    public void saveNote(View view) {
+    public void addNote(View view) {
         String title = titleEditText.getText().toString();
         String description = descriptionEditText.getText().toString();
 
         Note note = new Note(title, description);
-
-        noteRef.set(note).addOnSuccessListener(new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void aVoid) {
-                        Toast.makeText(MainActivity.this, "Note Saved", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Toast.makeText(MainActivity.this, "Error!", Toast.LENGTH_SHORT).show();
-                        Log.d(TAG, e.toString());
-                    }
-                });
+        noteRef.add(note);
     }
 
     public void loadNote(View view) {
-        noteRef.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+
+        noteRef.get().addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
             @Override
-            public void onSuccess(DocumentSnapshot documentSnapshot) {
-                if(documentSnapshot.exists()){
-                    //that's why we declared an empty constructor
+            public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                for(QueryDocumentSnapshot documentSnapshot: queryDocumentSnapshots) {
                     Note note = documentSnapshot.toObject(Note.class);
 
-                    String title = "No title";
-                    String description = "No description";
-
-                    Toast.makeText(MainActivity.this, "Note Loaded", Toast.LENGTH_SHORT).show();
-
-                    if(note != null) {
-                        title = note.getTitle();
-                        description = note.getDescription();
-                    }
-
-                    textViewData.setText("Title: "+ title + "\n" + "Description: "+ description);
-                }else{
-                    Toast.makeText(MainActivity.this, "Document does not exist", Toast.LENGTH_SHORT).show();
+                    String title = note.getTitle();
+                    String description = note.getDescription();
+                    String data = "Title: "+ title + "\n"+ "Description: "+ description + "\n\n";
+                    textViewData.setText(data);
                 }
-            }
-        }).addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception e) {
-                Toast.makeText(MainActivity.this, "Error", Toast.LENGTH_SHORT).show();
-                Log.d(TAG, e.toString());
             }
         });
     }
